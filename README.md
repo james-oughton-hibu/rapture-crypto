@@ -1,4 +1,4 @@
 rapture-crypto
 ==============
 
-Rapture Cryptography
+Crypto Libraries for Scala
