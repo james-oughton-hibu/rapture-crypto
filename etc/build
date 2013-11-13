@@ -1,4 +1,4 @@
 #!/bin/sh
 mkdir -p bin && \
-zinc -Sfeature -Sdeprecation -cp ../core/core.jar -d bin src/*.scala && \
+scalac -feature -deprecation -cp ../core/core.jar -d bin src/*.scala && \
 jar cmf etc/manifest crypto.jar -C bin rapture

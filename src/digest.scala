@@ -155,5 +155,4 @@ object HmacSha256 {
       mac.doFinal(msg)
     }
   }
-
 }
