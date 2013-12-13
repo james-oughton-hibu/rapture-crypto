@@ -56,7 +56,7 @@ abstract class AesEncryption {
   }
 
   def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit eh: ExceptionHandler):
-      eh.![DecryptionException, Array[Byte]] = eh.except {
+      eh.![Array[Byte], DecryptionException] = eh.wrap {
     if(iv == null && cipherText.length < 48) throw DecryptionException()
       
     val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
@@ -110,7 +110,7 @@ class Base64StringEncryption(sk: String) {
   def encrypt(string: String): String =
     base64.encode(aesEnc.encrypt(string.getBytes("UTF-8"))).mkString
   
-  def decrypt(string: String)(implicit eh: ExceptionHandler): eh.![DecryptionException, String] = eh.except {
+  def decrypt(string: String)(implicit eh: ExceptionHandler): eh.![String, DecryptionException] = eh.wrap {
     import strategy.throwExceptions
     new String(aesEnc.decrypt(base64.decode(string)), "UTF-8")
   }
