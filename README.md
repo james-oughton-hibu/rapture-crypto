@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/propensive/rapture-crypto.png?branch=master)](https://travis-ci.org/propensive/rapture-crypto)
+[![Build Status](https://travis-ci.org/propensive/rapture-crypto.png?branch=scala-2.10)](https://travis-ci.org/propensive/rapture-crypto)
 
 # Rapture Crypto
 
