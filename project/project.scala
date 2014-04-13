@@ -1,5 +1,5 @@
 object project extends ProjectSettings {
-  def scalaVersion = "2.10.4"
+  def scalaVersion = "2.11.0-RC4"
   def version = "0.9.0"
   def name = "crypto"
   def description = "Rapture Crypto provides a variety of convenient cryptographic methods for use in Scala."

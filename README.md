@@ -1,4 +1,4 @@
-[![Build Status](https://travis-ci.org/propensive/rapture-crypto.png?branch=scala-2.10)](https://travis-ci.org/propensive/rapture-crypto)
+[![Build Status](https://travis-ci.org/propensive/rapture-crypto.png?branch=scala-2.11)](https://travis-ci.org/propensive/rapture-crypto)
 
 # Rapture Crypto
 
@@ -10,7 +10,7 @@ Rapture Crypto is *managed*. This means that the API is expected to continue to 
 
 ### Availability
 
-Rapture Crypto 0.9.0 is available under the Apache 2.0 License from Maven Central with group ID `com.propensive` and artifact ID `rapture-crypto_2.10`.
+Rapture Crypto 0.9.0 is available under the Apache 2.0 License from Maven Central with group ID `com.propensive` and artifact ID `rapture-crypto_2.11`.
 
 #### SBT
 
@@ -27,7 +27,7 @@ If you use Maven, include the following dependency:
 ```xml
 <dependency>
   <groupId>com.propensive</groupId>
-  <artifactId>rapture-crypto_2.10</artifactId>
+  <artifactId>rapture-crypto_2.11</artifactId>
   <version>0.9.0<version>
 </dependency>
 ```
@@ -35,7 +35,7 @@ If you use Maven, include the following dependency:
 #### Download
 
 You can download Rapture Crypto directly from the [Rapture website](http://rapture.io/)
-Rapture Crypto depends on Scala 2.10 and Rapture Core, but has no other dependencies.
+Rapture Crypto depends on Scala 2.11 and Rapture Core, but has no other dependencies.
 
 #### Building from source
 
@@ -47,4 +47,4 @@ cd rapture-crypto
 sbt package
 ```
 
-If the compilation is successful, the compiled JAR file should be found in target/scala-2.10
+If the compilation is successful, the compiled JAR file should be found in target/scala-2.11.
