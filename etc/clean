@@ -1,2 +1,0 @@
-#!/bin/sh
-rm -rf crypto.jar bin/*
