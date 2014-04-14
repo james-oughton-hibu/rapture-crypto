@@ -2,11 +2,12 @@
 
 # Rapture Crypto
 
-Rapture Crypto provides idiomatic and extensible support for working with Cryptos and URLs in Scala.
+Rapture Crypto provides idiomatic and extensible support for working with cryptography in Scala.
 
 ### Status
 
-Rapture Crypto is *managed*. This means that the API is expected to continue to evolve, but all API changes will be documented with instructions on how to upgrade.
+Rapture Crypto is *experimental*. This means that no API stability is guaranteed, and the API is
+liable to be rewritten or discarded at any time.
 
 ### Availability
 
