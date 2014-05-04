@@ -5,7 +5,8 @@ object project extends ProjectSettings {
   def description = "Rapture Crypto provides a variety of convenient cryptographic methods for use in Scala."
   
   def dependencies = Seq(
-    "core" -> "0.10.0"
+    "core" -> "0.10.0",
+    "io" -> "0.10.0"
   )
   
   def thirdPartyDependencies = Nil

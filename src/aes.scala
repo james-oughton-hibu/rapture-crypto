@@ -26,6 +26,8 @@ import javax.crypto._
 import javax.crypto.spec._
 import java.util._
 
+import digesters._
+
 trait CryptoMethods extends RtsGroup
 
 /** Provides a simple interface for AES encryption with SHA-256 digest
@@ -44,7 +46,7 @@ abstract class AesEncryption {
     if(iv == null) cipher.init(Cipher.ENCRYPT_MODE, keySpec)
     else cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv))
     
-    val digest = Sha256.digest(clearText)
+    val digest = Hash.digest[Sha256](clearText).bytes
     val paddedLength = (clearText.length >> 4) + 1 << 4
     val cipherText = new Array[Byte](paddedLength + (if(iv == null) 48 else 0))
     
@@ -72,7 +74,7 @@ abstract class AesEncryption {
     val clearText = cipher.doFinal(cipherText, n, cipherText.length - n)
     
     if(iv == null) {
-      val digest2 = Sha256.digest(clearText)
+      val digest2 = Hash.digest[Sha256](clearText).bytes
       var i = 0
       var r = true
     
