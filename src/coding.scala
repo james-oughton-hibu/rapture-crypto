@@ -110,7 +110,7 @@ class Base64Codec(val char62: Char = '+', val char63: Char = '/', val padChar: C
     * does not tolerate any other illegal characters, including line breaks at
     * positions other than 76-char boundaries, in which case the result will
     * be garbage. */
-  def decode(data: String)(implicit rts: Rts): rts.Wrap[Array[Byte], Exception] =
+  def decode(data: String)(implicit rts: Rts[CryptoMethods]): rts.Wrap[Array[Byte], Exception] =
     rts.wrap {
       val in = data.toCharArray()
 
@@ -179,7 +179,7 @@ object Hex {
     new String(a flatMap { n => Array((n & 255) >> 4 & 15, n & 15) } map { _ + 48 } map { i =>
       (if(i > 57) i + 39 else i).toChar })
 
-  def decode(s: String)(implicit rts: Rts): rts.Wrap[Array[Byte], Exception] = rts.wrap {
+  def decode(s: String)(implicit rts: Rts[CryptoMethods]): rts.Wrap[Array[Byte], Exception] = rts.wrap {
     (if(s.length%2 == 0) s else "0"+s).to[Array].grouped(2).to[Array] map { case Array(l, r) =>
       (((l - 48)%39 << 4) + (r - 48)%39).toByte
     }

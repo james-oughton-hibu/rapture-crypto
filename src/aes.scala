@@ -26,6 +26,8 @@ import javax.crypto._
 import javax.crypto.spec._
 import java.util._
 
+trait CryptoMethods extends RtsGroup
+
 /** Provides a simple interface for AES encryption with SHA-256 digest
   * verification. This class is stateless. */
 abstract class AesEncryption {
@@ -55,7 +57,7 @@ abstract class AesEncryption {
     cipherText
   }
 
-  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit rts: Rts):
+  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit rts: Rts[CryptoMethods]):
       rts.Wrap[Array[Byte], DecryptionException] = rts.wrap {
     if(iv == null && cipherText.length < 48) throw DecryptionException()
       
@@ -110,9 +112,8 @@ class Base64StringEncryption(sk: String) {
   def encrypt(string: String): String =
     base64.encode(aesEnc.encrypt(string.getBytes("UTF-8"))).mkString
   
-  def decrypt(string: String)(implicit rts: Rts): rts.Wrap[String, DecryptionException] = rts.wrap {
-    import strategy.throwExceptions
-    new String(aesEnc.decrypt(base64.decode(string)), "UTF-8")
+  def decrypt(string: String)(implicit rts: Rts[CryptoMethods]): rts.Wrap[String, DecryptionException] = rts.wrap {
+    new String(aesEnc.decrypt(base64.decode(string)(raw))(raw), "UTF-8")
   }
 }
 
