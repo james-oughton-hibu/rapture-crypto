@@ -26,7 +26,7 @@ import javax.crypto._
 import javax.crypto.spec._
 import java.util._
 
-import digesters._
+import digests._
 
 trait CryptoMethods extends RtsGroup
 

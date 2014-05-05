@@ -26,9 +26,11 @@ import java.security._
 import language.implicitConversions
 
 trait DigestType
-
 trait Sha1 extends DigestType
 trait Sha256 extends DigestType
+trait Sha384 extends DigestType
+trait Sha512 extends DigestType
+trait Md2 extends DigestType
 trait Md5 extends DigestType
 
 case class Digest[T <: DigestType](val bytes: Array[Byte]) {
@@ -42,6 +44,9 @@ object ByteData {
     ByteData(string.getBytes(enc.name))
   
   implicit def arrayBytes(array: Array[Byte]): ByteData = ByteData(array)
+
+  implicit def resourceBytes[Res](res: Res)(implicit sr: StreamReader[Res, Byte]) =
+    ByteData(slurpable(res).slurp[Byte]())
 }
 
 case class ByteData(bytes: Array[Byte])
@@ -52,108 +57,46 @@ object Hash {
 }
 
 abstract class Digester[D <: DigestType] {
- 
   /** Digests the array of bytes. */
   def digest(msg: Array[Byte]): Array[Byte]
-
-  /** Digests the UTF-8 representation of the given string. */
-  def digest(msg: String): Array[Byte] = digest(msg.getBytes("UTF-8"))
-
-  /** Digests the given bytes, and returns the result in hexadecimal form. */
-  def digestHex(msg: Array[Byte]): String = {
-    
-    val bytes = digest(msg)
-    val out = new Array[Char](bytes.length * 2)
-
-    var i = 0
-    val len = bytes.length
-    
-    while(i < len) {
-      
-      val i2 = i << 1
-      
-      out(i2) = augmentString(((bytes(i) & 0xF0) >>> 4).toHexString.toUpperCase).head
-      out(i2 + 1) = augmentString((bytes(i) & 0x0F).toHexString.toUpperCase).head
-      
-      i += 1
-    }
-
-    new String(out)
-  }
 }
 
-object digesters {
+object digests {
 
-  implicit val sha1Digester = new Digester[Sha1] {
-    def digest(msg: Array[Byte]): Array[Byte] = {
-      val md = MessageDigest.getInstance("SHA-1")
-      md.digest(msg)
-    }
+  implicit val sha1: Digester[Sha1] = new Digester[Sha1] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-1").digest(msg)
   }
 
-/** SHA-256 digester, with additional methods for secure password encoding. */
-  implicit val sha256Digester = new Digester[Sha256] {
-    private val random = new SecureRandom
-
+  /** SHA-256 digester, with additional methods for secure password encoding. */
+  implicit val sha256: Digester[Sha256] = new Digester[Sha256] {
     /** Digests the given bytes. */
-    def digest(msg: Array[Byte]): Array[Byte] = {
-      val md = MessageDigest.getInstance("SHA-256")
-      md.digest(msg)
-    }
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-256").digest(msg)
+  }
 
-    /** Applies the hash function after combining the supplied key with a
-      * random 64-bit salt, and returns the result base-64 encoded. */
-    def makePassword(key: Array[Char]): String = {
-      val salt = new Array[Byte](8)
-      synchronized { random.nextBytes(salt) }
-      buildPass(key, salt)
-    }
-
-    /** Checks that the given key matches the salted hash. */
-    def checkPassword(key: Array[Char], hash: String): Boolean = {
-      val salt = Base64.decode(hash)(strategy.throwExceptions)
-      val newCode = buildPass(key, salt)
-      hash == newCode
-    }
-
-    private def buildPass(key: Array[Char], salt: Array[Byte]): String = {
-      
-      val md = MessageDigest.getInstance("SHA-256")
-      md.update(salt, 0, 8)
-      
-      val kLen = key.length
-      val keyBytes = new Array[Byte](kLen << 1)
-      var i = 0
-      
-      while(i < kLen) {
-        val i2 = i << 1
-        keyBytes(i2) = (key(i) >>> 8).asInstanceOf[Byte]
-        keyBytes(i2 + 1) = key(i).asInstanceOf[Byte]
-        i = i + 1
-      }
-      
-      val digest = md.digest(keyBytes)
-      
-      java.util.Arrays.fill(keyBytes, 0.toByte) // Don't leave sensitive data lying around
-      
-      val code = new Array[Byte](digest.length + 8)
-      
-      Array.copy(salt, 0, code, 0, 8)
-      Array.copy(digest, 0, code, 8, digest.length)
-      
-      new String(Base64.encode(code))
-    }
+  /** SHA-512 digester, with additional methods for secure password encoding. */
+  implicit val sha512: Digester[Sha512] = new Digester[Sha512] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-512").digest(msg)
+  }
+  
+  /** SHA-384 digester, with additional methods for secure password encoding. */
+  implicit val sha384: Digester[Sha384] = new Digester[Sha384] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-384").digest(msg)
   }
 
   /** MD5 Digester. This is included for backwards compatibility. MD5 is no
     * longer considered future-proof and new designs should prefer SHA-256. */
-  implicit val md5Digester = new Digester[Md5] {
-    
-    /** Digests the given bytes. */
-    def digest(msg: Array[Byte]): Array[Byte] = {
-      val md = MessageDigest.getInstance("MD5")
-      md.digest(msg)
-    }
+  implicit val md5: Digester[Md5] = new Digester[Md5] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("MD5").digest(msg)
+  }
+  
+  implicit val md2: Digester[Md2] = new Digester[Md2] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("MD2").digest(msg)
   }
 }
 
