@@ -35,6 +35,27 @@ trait Md5 extends DigestType
 
 class Digest[T <: DigestType](bytes: Array[Byte]) extends ByteData(bytes)
 
+package ciphers {
+  object des {
+    implicit def desGenerator: KeyGenerator[Des] = Des.keyGenerator
+    implicit def desDecryption = Des.decryption
+    implicit def desEncryption = Des.encryption
+  }
+  
+  object blowfish {
+    implicit def blowfishGenerator: KeyGenerator[Blowfish] = Blowfish.keyGenerator
+    implicit def blowfishDecryption = Blowfish.decryption
+    implicit def blowfishEncryption = Blowfish.encryption
+  }
+  
+  object aes {
+    implicit def aesGenerator: KeyGenerator[Aes] = Aes.keyGenerator
+    implicit def aesDecryption = Aes.decryption
+    implicit def aesEncryption = Aes.encryption
+  }
+
+}
+
 object ByteData {
   implicit def stringByteData(string: String)(implicit enc: Encoding): ByteData =
     ByteData(string.getBytes(enc.name))
@@ -45,12 +66,26 @@ object ByteData {
     ByteData(slurpable(res).slurp[Byte]())
 }
 
+object FromByteData {
+  implicit def stringFromByteData(implicit enc: Encoding) = new FromByteData[String] {
+    def build(bytes: Array[Byte]): String = new String(bytes, enc.name)
+  }
+  
+  implicit def bytesFromByteData = new FromByteData[Array[Byte]] {
+    def build(bytes: Array[Byte]): Array[Byte] = bytes
+  }
+}
+
+trait FromByteData[T] { def build(bytes: Array[Byte]): T }
+
 case class ByteData(bytes: Array[Byte]) {
   def hex: String = Hex.encode(bytes)
   def base64: String = Base64.encode(bytes)
   override def toString = hex
 
   def zero() = (0 until bytes.length) foreach { bytes(_) = 0 }
+
+  def as[T: FromByteData]: T = ?[FromByteData[T]].build(bytes)
 }
 
 class EncryptedData[C <: CipherType](bytes: Array[Byte]) extends ByteData(bytes)
@@ -106,67 +141,76 @@ object digests {
 
 trait CipherType
 trait Blowfish extends CipherType
-trait Aes extends CipherType
-trait TripleDes extends CipherType
-trait Des extends CipherType
 
-trait KeyGenerator[K <: CipherType] {
-  def generate(): Array[Byte]
-}
-
-object KeyGenerator {
-  implicit val blowfishGenerator: KeyGenerator[Blowfish] = new KeyGenerator[Blowfish] {
+class JavaxCryptoImplementations[-Codec <: CipherType](codec: String) {
+  implicit def encryption = new Encryption[Codec] {
+    def encrypt(key: Array[Byte], message: Array[Byte]) = {
+      val cipher = javax.crypto.Cipher.getInstance(codec)
+      cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, codec))
+      cipher.doFinal(message)
+    }
+  }
+  
+  implicit def decryption = new Decryption[Codec] {
+    def decrypt(key: Array[Byte], message: Array[Byte]) = {
+      val cipher = javax.crypto.Cipher.getInstance(codec)
+      cipher.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, codec))
+      cipher.doFinal(message)
+    }
+  }
+  
+  implicit def keyGenerator: KeyGenerator[Codec] = new KeyGenerator[Codec] {
     def generate(): Array[Byte] = {
-      val keyGen = javax.crypto.KeyGenerator.getInstance("Blowfish")
+      val keyGen = javax.crypto.KeyGenerator.getInstance(codec)
       keyGen.generateKey().getEncoded
     }
   }
 }
 
-trait Encrypter[C <: CipherType] {
+
+trait Aes extends CipherType
+object Aes extends JavaxCryptoImplementations[Aes]("AES")
+object Des extends JavaxCryptoImplementations[Des]("DES")
+object Blowfish extends JavaxCryptoImplementations[Blowfish]("Blowfish")
+
+trait TripleDes extends CipherType
+trait Des extends CipherType
+
+trait KeyGenerator[-K <: CipherType] {
+  type KeyType = K
+  def generate(): Array[Byte]
+}
+
+trait Encryption[-C <: CipherType] {
   def encrypt(key: Array[Byte], message: Array[Byte]): Array[Byte]
 }
 
-object Encrypter {
-  implicit val blowfishEncrypter = new Encrypter[Blowfish] {
-    def encrypt(key: Array[Byte], message: Array[Byte]) = {
-      val cipher = javax.crypto.Cipher.getInstance("Blowfish")
-      cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, "Blowfish"))
-      cipher.doFinal(message)
-    }
-  }
-}
+case class DecryptionException() extends Exception
 
-object Decrypter {
-  implicit val blowfishDecrypter = new Decrypter[Blowfish] {
-    def decrypt(key: Array[Byte], message: Array[Byte]) = {
-      val cipher = javax.crypto.Cipher.getInstance("Blowfish")
-      cipher.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, "Blowfish"))
-      cipher.doFinal(message)
-    }
-  }
-}
-
-trait Decrypter[C <: CipherType] {
+trait Decryption[-C <: CipherType] {
   def decrypt(key: Array[Byte], message: Array[Byte]): Array[Byte]
 }
 
 object Key {
-  def generate[K <: CipherType: KeyGenerator](): Key[K] =
-    new Key[K](?[KeyGenerator[K]].generate())
+  def generate[K <: CipherType]()(implicit gen: KeyGenerator[K]): Key[gen.KeyType] =
+    new Key[gen.KeyType](?[KeyGenerator[K]].generate())
 
   def read[K <: CipherType](key: ByteData): Key[K] =
     new Key[K](key.bytes)
 }
 
-class Key[K <: CipherType](bytes: Array[Byte]) extends ByteData(bytes)
+class Key[-K <: CipherType](bytes: Array[Byte]) extends ByteData(bytes)
 
 object Cipher {
-  def encrypt[C <: CipherType: Encrypter](key: Key[C])(message: ByteData): EncryptedData[C] =
-    new EncryptedData[C](?[Encrypter[C]].encrypt(key.bytes, message.bytes))
+  def encrypt[C <: CipherType: Encryption](key: Key[C])(message: ByteData): EncryptedData[C] =
+    new EncryptedData[C](?[Encryption[C]].encrypt(key.bytes, message.bytes))
 
-  def decrypt[C <: CipherType: Decrypter](key: Key[C])(message: EncryptedData[C]): ByteData =
-    ByteData(?[Decrypter[C]].decrypt(key.bytes, message.bytes))
+  def decrypt[C <: CipherType: Decryption](key: Key[C])(message: EncryptedData[C])
+      (implicit rts: Rts[CryptoMethods]): rts.Wrap[ByteData, DecryptionException] = rts wrap {
+    try ByteData(?[Decryption[C]].decrypt(key.bytes, message.bytes)) catch {
+      case e: Exception => throw DecryptionException()
+    }
+  }
 }
 
 
