@@ -41,10 +41,10 @@ abstract class AesEncryption {
 
   def encrypt(clearText: Array[Byte], iv: Array[Byte] = null): Array[Byte] = {
     
-    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+    val cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
     
-    if(iv == null) cipher.init(Cipher.ENCRYPT_MODE, keySpec)
-    else cipher.init(Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv))
+    if(iv == null) cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, keySpec)
+    else cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, keySpec, new IvParameterSpec(iv))
     
     val digest = Hash.digest[Sha256](clearText).bytes
     val paddedLength = (clearText.length >> 4) + 1 << 4
@@ -63,10 +63,10 @@ abstract class AesEncryption {
       rts.Wrap[Array[Byte], DecryptionException] = rts.wrap {
     if(iv == null && cipherText.length < 48) throw DecryptionException()
       
-    val cipher = Cipher.getInstance("AES/CBC/PKCS5Padding")
+    val cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
     val ips = if(iv == null) new IvParameterSpec(cipherText, 0, 16) else new IvParameterSpec(iv)
     
-    cipher.init(Cipher.DECRYPT_MODE, keySpec, ips)
+    cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec, ips)
     
     val n = if(iv == null) 64 else 0
     
@@ -137,8 +137,8 @@ abstract class AesNumbers {
   }
 
   protected def encryptLong(clear: Long, salt: Int): String = {
-    val cipher = Cipher.getInstance("AES/ECB/NoPadding")
-    cipher.init(Cipher.ENCRYPT_MODE, keySpec)
+    val cipher = javax.crypto.Cipher.getInstance("AES/ECB/NoPadding")
+    cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, keySpec)
 
     val parity = (clear >>> 32).toInt ^ clear.toInt ^ salt
 
@@ -169,8 +169,8 @@ abstract class AesNumbers {
     implicit val rts = strategy.throwExceptions
     if(cipherText.length == 22) {
       val in = base64.decode(cipherText)
-      val cipher = Cipher.getInstance("AES/ECB/NoPadding")
-      cipher.init(Cipher.DECRYPT_MODE, keySpec)
+      val cipher = javax.crypto.Cipher.getInstance("AES/ECB/NoPadding")
+      cipher.init(javax.crypto.Cipher.DECRYPT_MODE, keySpec)
       val out = cipher.doFinal(in)
 
       val clear =
