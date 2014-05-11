@@ -62,7 +62,7 @@ object ByteData {
   
   implicit def arrayBytes(array: Array[Byte]): ByteData = ByteData(array)
 
-  implicit def resourceBytes[Res](res: Res)(implicit sr: StreamReader[Res, Byte]) =
+  implicit def resourceBytes[Res](res: Res)(implicit sr: Reader[Res, Byte]) =
     ByteData(slurpable(res).slurp[Byte]())
 }
 
@@ -206,7 +206,7 @@ object Cipher {
     new EncryptedData[C](?[Encryption[C]].encrypt(key.bytes, message.bytes))
 
   def decrypt[C <: CipherType: Decryption](key: Key[C])(message: EncryptedData[C])
-      (implicit rts: Rts[CryptoMethods]): rts.Wrap[ByteData, DecryptionException] = rts wrap {
+      (implicit mode: Mode[CryptoMethods]): mode.Wrap[ByteData, DecryptionException] = mode wrap {
     try ByteData(?[Decryption[C]].decrypt(key.bytes, message.bytes)) catch {
       case e: Exception => throw DecryptionException()
     }

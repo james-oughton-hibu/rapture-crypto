@@ -19,6 +19,7 @@
 * and limitations under the License.                                                           *
 \**********************************************************************************************/
 package rapture.crypto
+
 import rapture.core._
 
 import java.security._
@@ -28,7 +29,7 @@ import java.util._
 
 import digests._
 
-trait CryptoMethods extends RtsGroup
+trait CryptoMethods extends ModeGroup
 
 /** Provides a simple interface for AES encryption with SHA-256 digest
   * verification. This class is stateless. */
@@ -59,8 +60,8 @@ abstract class AesEncryption {
     cipherText
   }
 
-  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit rts: Rts[CryptoMethods]):
-      rts.Wrap[Array[Byte], DecryptionException] = rts.wrap {
+  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit mode: Mode[CryptoMethods]):
+      mode.Wrap[Array[Byte], DecryptionException] = mode.wrap {
     if(iv == null && cipherText.length < 48) throw DecryptionException()
       
     val cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
@@ -98,7 +99,7 @@ abstract class AesEncryption {
   def apply(clearText: Array[Byte]): Array[Byte] = encrypt(clearText)
   
   def unapply(cipherText: Array[Byte]): Option[Array[Byte]] =
-    try Some(decrypt(cipherText)(strategy.throwExceptions)) catch { case DecryptionException() => None }
+    try Some(decrypt(cipherText)) catch { case DecryptionException() => None }
 }
 
 class Base64StringEncryption(sk: String) {
@@ -114,7 +115,7 @@ class Base64StringEncryption(sk: String) {
   def encrypt(string: String): String =
     base64.encode(aesEnc.encrypt(string.getBytes("UTF-8"))).mkString
   
-  def decrypt(string: String)(implicit rts: Rts[CryptoMethods]): rts.Wrap[String, DecryptionException] = rts.wrap {
+  def decrypt(string: String)(implicit mode: Mode[CryptoMethods]): mode.Wrap[String, DecryptionException] = mode.wrap {
     new String(aesEnc.decrypt(base64.decode(string)(raw))(raw), "UTF-8")
   }
 }
@@ -166,7 +167,6 @@ abstract class AesNumbers {
   }
 
   protected def decryptLong(cipherText: String): Option[Long] = {
-    implicit val rts = strategy.throwExceptions
     if(cipherText.length == 22) {
       val in = base64.decode(cipherText)
       val cipher = javax.crypto.Cipher.getInstance("AES/ECB/NoPadding")
