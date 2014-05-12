@@ -142,7 +142,7 @@ object digests {
 trait CipherType
 trait Blowfish extends CipherType
 
-class JavaxCryptoImplementations[-Codec <: CipherType](codec: String) {
+class JavaxCryptoImplementations[Codec <: CipherType](codec: String) {
   implicit def encryption = new Encryption[Codec] {
     def encrypt(key: Array[Byte], message: Array[Byte]) = {
       val cipher = javax.crypto.Cipher.getInstance(codec)
@@ -187,7 +187,7 @@ trait Encryption[-C <: CipherType] {
 
 case class DecryptionException() extends Exception
 
-trait Decryption[-C <: CipherType] {
+trait Decryption[C <: CipherType] {
   def decrypt(key: Array[Byte], message: Array[Byte]): Array[Byte]
 }
 
@@ -199,20 +199,17 @@ object Key {
     new Key[K](key.bytes)
 }
 
-class Key[-K <: CipherType](bytes: Array[Byte]) extends ByteData(bytes)
+class Key[C <: CipherType](bytes: Array[Byte]) extends ByteData(bytes) {
+  def encrypt(message: ByteData)(implicit encryption: Encryption[C]): EncryptedData[C] =
+    new EncryptedData[C](encryption.encrypt(bytes, message.bytes))
 
-object Cipher {
-  def encrypt[C <: CipherType: Encryption](key: Key[C])(message: ByteData): EncryptedData[C] =
-    new EncryptedData[C](?[Encryption[C]].encrypt(key.bytes, message.bytes))
-
-  def decrypt[C <: CipherType: Decryption](key: Key[C])(message: EncryptedData[C])
-      (implicit mode: Mode[CryptoMethods]): mode.Wrap[ByteData, DecryptionException] = mode wrap {
-    try ByteData(?[Decryption[C]].decrypt(key.bytes, message.bytes)) catch {
+  def decrypt(message: EncryptedData[C])
+      (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[ByteData, DecryptionException] = mode wrap {
+    try ByteData(decryption.decrypt(bytes, message.bytes)) catch {
       case e: Exception => throw DecryptionException()
     }
   }
 }
-
 
 
 /*object HmacSha256 {
