@@ -21,6 +21,7 @@
 package rapture.crypto
 import rapture.core._
 import rapture.io._
+import rapture.codec._
 
 import java.security._
 import language.implicitConversions
@@ -33,7 +34,7 @@ trait Sha512 extends DigestType
 trait Md2 extends DigestType
 trait Md5 extends DigestType
 
-class Digest[T <: DigestType](bytes: Array[Byte]) extends ByteData(bytes)
+class Digest[T <: DigestType](bytes: Array[Byte]) extends Bytes(bytes)
 
 package ciphers {
   object des {
@@ -56,42 +57,10 @@ package ciphers {
 
 }
 
-object ByteData {
-  implicit def stringByteData(string: String)(implicit enc: Encoding): ByteData =
-    ByteData(string.getBytes(enc.name))
-  
-  implicit def arrayBytes(array: Array[Byte]): ByteData = ByteData(array)
-
-  implicit def resourceBytes[Res](res: Res)(implicit sr: Reader[Res, Byte]) =
-    ByteData(slurpable(res).slurp[Byte]())
-}
-
-object FromByteData {
-  implicit def stringFromByteData(implicit enc: Encoding) = new FromByteData[String] {
-    def build(bytes: Array[Byte]): String = new String(bytes, enc.name)
-  }
-  
-  implicit def bytesFromByteData = new FromByteData[Array[Byte]] {
-    def build(bytes: Array[Byte]): Array[Byte] = bytes
-  }
-}
-
-trait FromByteData[T] { def build(bytes: Array[Byte]): T }
-
-case class ByteData(bytes: Array[Byte]) {
-  def hex: String = Hex.encode(bytes)
-  def base64: String = Base64.encode(bytes)
-  override def toString = hex
-
-  def zero() = (0 until bytes.length) foreach { bytes(_) = 0 }
-
-  def as[T: FromByteData]: T = ?[FromByteData[T]].build(bytes)
-}
-
-class EncryptedData[C <: CipherType](bytes: Array[Byte]) extends ByteData(bytes)
+class EncryptedData[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes)
 
 object Hash {
-  def digest[D <: DigestType: Digester](msg: ByteData): Digest[D] =
+  def digest[D <: DigestType: Digester](msg: Bytes): Digest[D] =
     new Digest[D](?[Digester[D]].digest(msg.bytes))
 }
 
@@ -195,17 +164,17 @@ object Key {
   def generate[K <: CipherType]()(implicit gen: KeyGenerator[K]): Key[gen.KeyType] =
     new Key[gen.KeyType](?[KeyGenerator[K]].generate())
 
-  def read[K <: CipherType](key: ByteData): Key[K] =
+  def read[K <: CipherType](key: Bytes): Key[K] =
     new Key[K](key.bytes)
 }
 
-class Key[C <: CipherType](bytes: Array[Byte]) extends ByteData(bytes) {
-  def encrypt(message: ByteData)(implicit encryption: Encryption[C]): EncryptedData[C] =
+class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
+  def encrypt(message: Bytes)(implicit encryption: Encryption[C]): EncryptedData[C] =
     new EncryptedData[C](encryption.encrypt(bytes, message.bytes))
 
   def decrypt(message: EncryptedData[C])
-      (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[ByteData, DecryptionException] = mode wrap {
-    try ByteData(decryption.decrypt(bytes, message.bytes)) catch {
+      (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
+    try Bytes(decryption.decrypt(bytes, message.bytes)) catch {
       case e: Exception => throw DecryptionException()
     }
   }
