@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Crypto Library                                                                       *
-* Version 0.9.0                                                                                *
+* Version 0.10.0                                                                               *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -20,133 +20,172 @@
 \**********************************************************************************************/
 package rapture.crypto
 import rapture.core._
+import rapture.io._
+import rapture.codec._
 
 import java.security._
+import language.implicitConversions
 
-abstract class Digester {
+trait DigestType
+trait Sha1 extends DigestType
+trait Sha256 extends DigestType
+trait Sha384 extends DigestType
+trait Sha512 extends DigestType
+trait Md2 extends DigestType
+trait Md5 extends DigestType
+
+class Digest[T <: DigestType](bytes: Array[Byte]) extends Bytes(bytes)
+
+package ciphers {
+  object des {
+    implicit def desGenerator: KeyGenerator[Des] = Des.keyGenerator
+    implicit def desDecryption = Des.decryption
+    implicit def desEncryption = Des.encryption
+  }
   
+  object blowfish {
+    implicit def blowfishGenerator: KeyGenerator[Blowfish] = Blowfish.keyGenerator
+    implicit def blowfishDecryption = Blowfish.decryption
+    implicit def blowfishEncryption = Blowfish.encryption
+  }
+  
+  object aes {
+    implicit def aesGenerator: KeyGenerator[Aes] = Aes.keyGenerator
+    implicit def aesDecryption = Aes.decryption
+    implicit def aesEncryption = Aes.encryption
+  }
+
+}
+
+class EncryptedData[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes)
+
+object Hash {
+  def digest[D <: DigestType: Digester](msg: Bytes): Digest[D] =
+    new Digest[D](?[Digester[D]].digest(msg.bytes))
+}
+
+abstract class Digester[D <: DigestType] {
   /** Digests the array of bytes. */
   def digest(msg: Array[Byte]): Array[Byte]
-
-  /** Digests the UTF-8 representation of the given string. */
-  def digest(msg: String): Array[Byte] = digest(msg.getBytes("UTF-8"))
-
-  /** Digests the UTF-8 representation of the given string, and returns the
-   * result in hexadecimal form. */
-  def digestHex(msg: String): String = digestHex(msg.getBytes("UTF-8"))
-
-  /** Digests the given bytes, and returns the result in hexadecimal form. */
-  def digestHex(msg: Array[Byte]): String = {
-    
-    val bytes = digest(msg)
-    val out = new Array[Char](bytes.length * 2)
-
-    var i = 0
-    val len = bytes.length
-    
-    while(i < len) {
-      
-      val i2 = i << 1
-      
-      out(i2) = augmentString(((bytes(i) & 0xF0) >>> 4).toHexString.toUpperCase).head
-      out(i2 + 1) = augmentString((bytes(i) & 0x0F).toHexString.toUpperCase).head
-      
-      i += 1
-    }
-
-    new String(out)
-  }
-
-  /** Digests the UTF-8 representation of the given string, and returns the
-    * result base-64 encoded. Note that this is not strictly RFC2045 compliant
-    * as the result is not padded. Append "==" to comply. */
-  def digestBase64(msg: String): String = digestBase64(msg.getBytes("UTF-8"))
-
-  /** Digests the given bytes, and returns the result base-64 encoded. Note
-    * that this is not strictly RFC2045 compliant as the result is not padded.
-    * Append "==" to comply. */
-  def digestBase64(msg: Array[Byte]): String =
-    new String(Base64.encode(digest(msg)))
 }
 
-object Sha1 extends Digester {
-  def digest(msg: Array[Byte]): Array[Byte] = {
-    val md = MessageDigest.getInstance("SHA-1")
-    md.digest(msg)
-  }
-}
+object digests {
 
-/** SHA-256 digester, with additional methods for secure password encoding. */
-object Sha256 extends Digester {
+  implicit val sha1: Digester[Sha1] = new Digester[Sha1] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-1").digest(msg)
+  }
+
+  /** SHA-256 digester, with additional methods for secure password encoding. */
+  implicit val sha256: Digester[Sha256] = new Digester[Sha256] {
+    /** Digests the given bytes. */
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-256").digest(msg)
+  }
+
+  /** SHA-512 digester, with additional methods for secure password encoding. */
+  implicit val sha512: Digester[Sha512] = new Digester[Sha512] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-512").digest(msg)
+  }
   
-  private val random = new SecureRandom
-
-  /** Digests the given bytes. */
-  def digest(msg: Array[Byte]): Array[Byte] = {
-    val md = MessageDigest.getInstance("SHA-256")
-    md.digest(msg)
+  /** SHA-384 digester, with additional methods for secure password encoding. */
+  implicit val sha384: Digester[Sha384] = new Digester[Sha384] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("SHA-384").digest(msg)
   }
 
-  /** Applies the hash function after combining the supplied key with a
-    * random 64-bit salt, and returns the result base-64 encoded. */
-  def makePassword(key: Array[Char]): String = {
-    val salt = new Array[Byte](8)
-    synchronized { random.nextBytes(salt) }
-    buildPass(key, salt)
+  /** MD5 Digester. This is included for backwards compatibility. MD5 is no
+    * longer considered future-proof and new designs should prefer SHA-256. */
+  implicit val md5: Digester[Md5] = new Digester[Md5] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("MD5").digest(msg)
   }
-
-  /** Checks that the given key matches the salted hash. */
-  def checkPassword(key: Array[Char], hash: String): Boolean = {
-    val salt = Base64.decode(hash)(strategy.throwExceptions)
-    val newCode = buildPass(key, salt)
-    hash == newCode
-  }
-
-  private def buildPass(key: Array[Char], salt: Array[Byte]): String = {
-    
-    val md = MessageDigest.getInstance("SHA-256")
-    md.update(salt, 0, 8)
-    
-    val kLen = key.length
-    val keyBytes = new Array[Byte](kLen << 1)
-    var i = 0
-    
-    while(i < kLen) {
-      val i2 = i << 1
-      keyBytes(i2) = (key(i) >>> 8).asInstanceOf[Byte]
-      keyBytes(i2 + 1) = key(i).asInstanceOf[Byte]
-      i = i + 1
-    }
-    
-    val digest = md.digest(keyBytes)
-    
-    java.util.Arrays.fill(keyBytes, 0.toByte) // Don't leave sensitive data lying around
-    
-    val code = new Array[Byte](digest.length + 8)
-    
-    Array.copy(salt, 0, code, 0, 8)
-    Array.copy(digest, 0, code, 8, digest.length)
-    
-    new String(Base64.encode(code))
-  }
-}
-
-/** MD5 Digester. This is included for backwards compatibility. MD5 is no
-  * longer considered future-proof and new designs should prefer SHA-256. */
-object Md5 extends Digester {
   
-  /** Digests the given bytes. */
-  def digest(msg: Array[Byte]): Array[Byte] = {
-    val md = MessageDigest.getInstance("MD5")
-    md.digest(msg)
+  implicit val md2: Digester[Md2] = new Digester[Md2] {
+    def digest(msg: Array[Byte]): Array[Byte] =
+      MessageDigest.getInstance("MD2").digest(msg)
   }
 }
 
-object HmacSha256 {
+trait CipherType
+trait Blowfish extends CipherType
+
+class JavaxCryptoImplementations[Codec <: CipherType](codec: String) {
+  implicit def encryption: Encryption[Codec, Bytes] = new Encryption[Codec, Bytes] {
+    def encrypt(key: Array[Byte], message: Bytes) = {
+      val cipher = javax.crypto.Cipher.getInstance(codec)
+      cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, codec))
+      cipher.doFinal(message.bytes)
+    }
+  }
+  
+  implicit def decryption = new Decryption[Codec] {
+    def decrypt(key: Array[Byte], message: Array[Byte]) = {
+      val cipher = javax.crypto.Cipher.getInstance(codec)
+      cipher.init(javax.crypto.Cipher.DECRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, codec))
+      cipher.doFinal(message)
+    }
+  }
+  
+  implicit def keyGenerator: KeyGenerator[Codec] = new KeyGenerator[Codec] {
+    def generate(): Array[Byte] = {
+      val keyGen = javax.crypto.KeyGenerator.getInstance(codec)
+      keyGen.generateKey().getEncoded
+    }
+  }
+}
+
+
+trait Aes extends CipherType
+object Aes extends JavaxCryptoImplementations[Aes]("AES")
+object Des extends JavaxCryptoImplementations[Des]("DES")
+object Blowfish extends JavaxCryptoImplementations[Blowfish]("Blowfish")
+
+trait TripleDes extends CipherType
+trait Des extends CipherType
+
+trait KeyGenerator[-K <: CipherType] {
+  type KeyType = K
+  def generate(): Array[Byte]
+}
+
+trait Encryption[-C <: CipherType, Msg] {
+  def encrypt(key: Array[Byte], message: Msg): Array[Byte]
+}
+
+case class DecryptionException() extends Exception
+
+trait Decryption[C <: CipherType] {
+  def decrypt(key: Array[Byte], message: Array[Byte]): Array[Byte]
+}
+
+object Key {
+  def generate[K <: CipherType]()(implicit gen: KeyGenerator[K]): Key[gen.KeyType] =
+    new Key[gen.KeyType](?[KeyGenerator[K]].generate())
+
+  def read[K <: CipherType](key: Bytes): Key[K] =
+    new Key[K](key.bytes)
+}
+
+class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
+  def encrypt[Msg](message: Msg)(implicit encryption: Encryption[C, Msg]): EncryptedData[C] =
+    new EncryptedData[C](encryption.encrypt(bytes, message))
+
+  def decrypt(message: EncryptedData[C])
+      (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
+    try Bytes(decryption.decrypt(bytes, message.bytes)) catch {
+      case e: Exception => throw DecryptionException()
+    }
+  }
+}
+
+
+/*object HmacSha256 {
 
   import javax.crypto._
 
-  def signer(key: Array[Byte]): Digester = new Digester {
+  def signer(key: Array[Byte]): Digester = new Digester[Hmac] {
     
     def digest(msg: Array[Byte]): Array[Byte] = {
       val mac = Mac.getInstance("HmacSHA256")
@@ -155,4 +194,4 @@ object HmacSha256 {
       mac.doFinal(msg)
     }
   }
-}
+}*/

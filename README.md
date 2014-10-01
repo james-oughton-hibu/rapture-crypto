@@ -11,14 +11,14 @@ liable to be rewritten or discarded at any time.
 
 ### Availability
 
-Rapture Crypto 0.9.0 is available under the Apache 2.0 License from Maven Central with group ID `com.propensive` and artifact ID `rapture-crypto_2.11`.
+Rapture Crypto 0.10.0 is available under the Apache 2.0 License from Maven Central with group ID `com.propensive` and artifact ID `rapture-crypto_2.11`.
 
 #### SBT
 
 You can include Rapture Crypto as a dependency in your own project by adding the following library dependency to your build file:
 
 ```scala
-libraryDependencies ++= Seq("com.propensive" %% "rapture-crypto" % "0.9.0")
+libraryDependencies ++= Seq("com.propensive" %% "rapture-crypto" % "0.10.0")
 ```
 
 #### Maven
@@ -29,7 +29,7 @@ If you use Maven, include the following dependency:
 <dependency>
   <groupId>com.propensive</groupId>
   <artifactId>rapture-crypto_2.11</artifactId>
-  <version>0.9.0<version>
+  <version>0.10.0<version>
 </dependency>
 ```
 
