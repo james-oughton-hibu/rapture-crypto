@@ -146,7 +146,7 @@ trait TripleDes extends CipherType
 trait Des extends CipherType
 
 trait KeyGenerator[-K <: CipherType] {
-  type KeyType = K
+  type KeyType >: K <: CipherType
   def generate(): Array[Byte]
 }
 
