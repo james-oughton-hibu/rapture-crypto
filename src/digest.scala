@@ -112,11 +112,11 @@ trait CipherType
 trait Blowfish extends CipherType
 
 class JavaxCryptoImplementations[Codec <: CipherType](codec: String) {
-  implicit def encryption = new Encryption[Codec] {
-    def encrypt(key: Array[Byte], message: Array[Byte]) = {
+  implicit def encryption: Encryption[Codec, Bytes] = new Encryption[Codec, Bytes] {
+    def encrypt(key: Array[Byte], message: Bytes) = {
       val cipher = javax.crypto.Cipher.getInstance(codec)
       cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, new javax.crypto.spec.SecretKeySpec(key, codec))
-      cipher.doFinal(message)
+      cipher.doFinal(message.bytes)
     }
   }
   
@@ -150,8 +150,8 @@ trait KeyGenerator[-K <: CipherType] {
   def generate(): Array[Byte]
 }
 
-trait Encryption[-C <: CipherType] {
-  def encrypt(key: Array[Byte], message: Array[Byte]): Array[Byte]
+trait Encryption[-C <: CipherType, Msg] {
+  def encrypt(key: Array[Byte], message: Msg): Array[Byte]
 }
 
 case class DecryptionException() extends Exception
@@ -169,8 +169,8 @@ object Key {
 }
 
 class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
-  def encrypt(message: Bytes)(implicit encryption: Encryption[C]): EncryptedData[C] =
-    new EncryptedData[C](encryption.encrypt(bytes, message.bytes))
+  def encrypt[Msg](message: Msg)(implicit encryption: Encryption[C, Msg]): EncryptedData[C] =
+    new EncryptedData[C](encryption.encrypt(bytes, message))
 
   def decrypt(message: EncryptedData[C])
       (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
