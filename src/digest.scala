@@ -155,7 +155,7 @@ object Blowfish extends JavaxCryptoImplementations[Blowfish]("Blowfish")
 trait TripleDes extends CipherType
 trait Des extends CipherType
 
-trait KeyGenerator[-K <: CipherType] {
+trait KeyGenerator[K <: CipherType] {
   type KeyType = K
   def generate(): Array[Byte]
 }
