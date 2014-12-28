@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Crypto Library                                                                       *
-* Version 0.10.0                                                                               *
+* Version 1.1.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -155,8 +155,8 @@ object Blowfish extends JavaxCryptoImplementations[Blowfish]("Blowfish")
 trait TripleDes extends CipherType
 trait Des extends CipherType
 
-trait KeyGenerator[-K <: CipherType] {
-  type KeyType >: K <: CipherType
+trait KeyGenerator[K <: CipherType] {
+  type KeyType = K
   def generate(): Array[Byte]
 }
 
