@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Crypto Library                                                                       *
-* Version 0.10.0                                                                               *
+* Version 1.1.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
