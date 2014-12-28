@@ -1,12 +1,12 @@
 object project extends ProjectSettings {
   def scalaVersion = "2.10.4"
-  def version = "0.10.0"
+  def version = "1.1.0"
   def name = "crypto"
   def description = "Rapture Crypto provides a variety of convenient cryptographic methods for use in Scala."
   
   def dependencies = Seq(
-    "io" -> "0.10.0",
-    "codec" -> "1.0.0"
+    "io" -> "1.1.0",
+    "codec" -> "1.1.0"
   )
   
   def thirdPartyDependencies = Nil

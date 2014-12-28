@@ -1,6 +1,6 @@
 /**********************************************************************************************\
 * Rapture Crypto Library                                                                       *
-* Version 0.10.0                                                                               *
+* Version 1.1.0                                                                                *
 *                                                                                              *
 * The primary distribution site is                                                             *
 *                                                                                              *
@@ -24,6 +24,7 @@ import rapture.io._
 import rapture.codec._
 
 import java.security._
+import javax.crypto.Mac
 import language.implicitConversions
 
 trait DigestType
@@ -64,6 +65,15 @@ object Hash {
     new Digest[D](?[Digester[D]].digest(msg.bytes))
 }
 
+
+object Digester {
+  implicit val sha1: Digester[Sha1] = digests.sha1
+  implicit val sha256: Digester[Sha256] = digests.sha256
+  implicit val sha512: Digester[Sha512] = digests.sha512
+  implicit val sha384: Digester[Sha384] = digests.sha384
+  implicit val md5: Digester[Md5] = digests.md5
+  implicit val md2: Digester[Md2] = digests.md2
+}
 abstract class Digester[D <: DigestType] {
   /** Digests the array of bytes. */
   def digest(msg: Array[Byte]): Array[Byte]
@@ -145,7 +155,7 @@ object Blowfish extends JavaxCryptoImplementations[Blowfish]("Blowfish")
 trait TripleDes extends CipherType
 trait Des extends CipherType
 
-trait KeyGenerator[-K <: CipherType] {
+trait KeyGenerator[K <: CipherType] {
   type KeyType = K
   def generate(): Array[Byte]
 }
@@ -180,18 +190,15 @@ class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
   }
 }
 
-
-/*object HmacSha256 {
-
-  import javax.crypto._
-
-  def signer(key: Array[Byte]): Digester = new Digester[Hmac] {
-    
+case class HmacSigner(key: Bytes) {
+  type Sha256Hmac <: DigestType
+  implicit val hmac: Digester[Sha256Hmac] = new Digester[Sha256Hmac] {
     def digest(msg: Array[Byte]): Array[Byte] = {
       val mac = Mac.getInstance("HmacSHA256")
-      val secretKey = new spec.SecretKeySpec(key, "HmacSHA256")
+      val secretKey = new javax.crypto.spec.SecretKeySpec(key.bytes, "HmacSHA256")
       mac.init(secretKey)
       mac.doFinal(msg)
     }
   }
-}*/
+
+}
