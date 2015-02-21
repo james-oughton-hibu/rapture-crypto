@@ -62,7 +62,7 @@ abstract class AesEncryption {
 
   def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit mode: Mode[CryptoMethods]):
       mode.Wrap[Array[Byte], DecryptionException] = mode.wrap {
-    if(iv == null && cipherText.length < 48) throw DecryptionException()
+    if(iv == null && cipherText.length < 48) mode.exception(DecryptionException())
       
     val cipher = javax.crypto.Cipher.getInstance("AES/CBC/PKCS5Padding")
     val ips = if(iv == null) new IvParameterSpec(cipherText, 0, 16) else new IvParameterSpec(iv)
@@ -89,7 +89,7 @@ abstract class AesEncryption {
         Arrays.fill(digest1, 0.toByte)
         Arrays.fill(digest2, 0.toByte)
         Arrays.fill(clearText, 0.toByte)
-        throw DecryptionException()
+        mode.exception(DecryptionException())
       }
     }
     

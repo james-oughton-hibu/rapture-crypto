@@ -185,7 +185,7 @@ class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
   def decrypt(message: EncryptedData[C])
       (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
     try Bytes(decryption.decrypt(bytes, message.bytes)) catch {
-      case e: Exception => throw DecryptionException()
+      case e: Exception => mode.exception(DecryptionException())
     }
   }
 }
