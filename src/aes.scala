@@ -29,7 +29,8 @@ import java.util._
 
 import digests._
 
-trait CryptoMethods extends ModeGroup
+trait `AesEncryption#decrypt` extends MethodConstraint
+trait `Key#decrypt` extends MethodConstraint
 
 /** Provides a simple interface for AES encryption with SHA-256 digest
   * verification. This class is stateless. */
@@ -60,7 +61,7 @@ abstract class AesEncryption {
     cipherText
   }
 
-  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit mode: Mode[CryptoMethods]):
+  def decrypt(cipherText: Array[Byte], iv: Array[Byte] = null)(implicit mode: Mode[`AesEncryption#decrypt`]):
       mode.Wrap[Array[Byte], DecryptionException] = mode.wrap {
     if(iv == null && cipherText.length < 48) mode.exception(DecryptionException())
       

@@ -20,7 +20,6 @@
 \**********************************************************************************************/
 package rapture.crypto
 import rapture.core._
-import rapture.io._
 import rapture.codec._
 
 import java.security._
@@ -77,6 +76,22 @@ object Digester {
 abstract class Digester[D <: DigestType] {
   /** Digests the array of bytes. */
   def digest(msg: Array[Byte]): Array[Byte]
+}
+
+case class Salt(value: String)
+
+object Password {
+  def apply(value: String)(implicit salt: Salt) = new HashedPassword(value)(salt)
+}
+
+class Password(private val value: String)(implicit salt: Salt) {
+  def digest: String = Bytes(Digester.sha256.digest((value + salt).getBytes("UTF-8"))).encode[Hex]
+  override def toString = s"password:$digest"
+  def check(password: String) = new Password(password).digest == digest
+}
+
+class HashedPassword(hash: String)(implicit salt: Salt) extends Password(null)(salt) {
+  override def digest: String = hash
 }
 
 object digests {
@@ -183,7 +198,7 @@ class Key[C <: CipherType](bytes: Array[Byte]) extends Bytes(bytes) {
     new EncryptedData[C](encryption.encrypt(bytes, message))
 
   def decrypt(message: EncryptedData[C])
-      (implicit mode: Mode[CryptoMethods], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
+      (implicit mode: Mode[`Key#decrypt`], decryption: Decryption[C]): mode.Wrap[Bytes, DecryptionException] = mode wrap {
     try Bytes(decryption.decrypt(bytes, message.bytes)) catch {
       case e: Exception => mode.exception(DecryptionException())
     }
